@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" type="text/css" th:href="@{element/index.css}">
+</head>
+<body>
+
+<div id="app">
+    <h3>
+        <strong>欢迎你：<span>{{realName}}</span></strong>
+       <!--<a href="/users/logout" onclick="if(confirm('确定退出系统?')==false)return false;">退出系统</a>-->
+       <a href="javascript:;" @click="logout">退出系统</a>
+    </h3>
+
+    <el-tabs tab-position="left" >
+        <el-tab-pane label="销售信息查询">
+            <template>
+                <div class="demo-input-suffix">
+                    <strong>销售信息查询：</strong>
+                    排序方式：
+                    <el-select v-model="optionValue" placeholder="请选择">
+                        <el-option
+                                v-for="item in options"
+                                :key="item.value"
+                                :label="item.label"
+                                :value="item.value">
+                        </el-option>
+                    </el-select>
+
+                    <el-button @click="toSaleList()">提交</el-button>
+                </div>
+            </template>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="ID" width="180">
+                </el-table-column>
+                <el-table-column prop="product_name" label="商品" width="180">
+                </el-table-column>
+                <el-table-column prop="price" label="单价" width="180">
+                </el-table-column>
+                <el-table-column prop="quantity" label="数量" width="180">
+                </el-table-column>
+                <el-table-column prop="total_price" label="总价" width="180">
+                </el-table-column>
+                <el-table-column prop="sale_date" label="销售日期" width="180">
+                </el-table-column>
+                <el-table-column prop="real_name" label="销售员" width="180">
+                </el-table-column>
+            </el-table>
+
+            <!--<el-pagination
+                    background
+                    layout="prev, pager, next"
+                    @current-change="toSaleList"
+                    :total="total">
+            </el-pagination>-->
+
+            <el-pagination
+                    @size-change="handleSizeChange"
+                    @current-change="toSaleList"
+                    :current-page="currentPage"
+                    :page-sizes="[4, 8]"
+                    :page-size="pagesize"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="totalCount">
+            </el-pagination>
+
+        </el-tab-pane>
+
+        <el-tab-pane label="销售">添加销售
+
+            <el-form ref="form" :model="form" label-width="80px">
+                <el-form-item label="商品名称">
+                    <el-select v-model="form.productId" placeholder="请选择">
+                        <el-option
+                                v-for="item in productNameList"
+                                :key="item.id"
+                                :label="item.productName"
+                                :value="item.id">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item label="销售单价">
+                    <el-input v-model="form.price"></el-input>
+                </el-form-item>
+                <el-form-item label="销售数量">
+                    <el-input v-model="form.quantity"></el-input>
+                </el-form-item>
+
+                <el-form-item>
+                    <el-button @click="onSubmit()">添加</el-button>
+                    <el-button>取消</el-button>
+                </el-form-item>
+            </el-form>
+
+        </el-tab-pane>
+
+        <el-tab-pane label="查看库存">查看库存:
+            <el-select v-model="productId" placeholder="请选择">
+                <el-option
+                        v-for="item in productNameList"
+                        :key="item.id"
+                        :label="item.productName"
+                        :value="item.id">
+                </el-option>
+            </el-select>
+
+            <el-button @click="toQueryAllProduct()">提交</el-button>
+            <p>该商品库存数：{{quantity}}</p>
+        </el-tab-pane>
+
+    </el-tabs>
+</div>
+
+</body>
+<script th:src="@{/js/vue.min.js}"></script>
+<script th:src="@{/js/vue-axios.js}"></script>
+<script th:src="@{/element/index.js}"></script>
+
+<script>
+    var app =new Vue({
+     el:"#app",
+     data(){
+         return{
+             form: {
+                 productId:"",
+                 price:"",
+                 quantity:"",
+             },
+             quantity:0,
+             productId:"",
+             productNameList:[],
+             options: [{
+                 value: 'sale_date',
+                 label: '销售日期'
+             }, {
+                 value: 'price',
+                 label: '单笔总价'
+             },],
+             optionValue: "sale_date",
+             //表格当前页数据
+             tableData: [],
+
+             //多选数组
+             multipleSelection: [],
+
+             //搜索条件
+             criteria: '',
+
+             //下拉菜单选项
+             select: '',
+
+             //默认每页数据量
+             pagesize: 4,
+
+             //默认高亮行数据id
+             highlightId: -1,
+
+             //当前页码
+             currentPage: 1,
+
+             //查询的页码
+             start: 1,
+
+             //默认数据总数
+             totalCount: 0,
+         }
+     },
+     created(){
+         this.realName = sessionStorage.getItem("realName");
+         this.toSaleList(1);
+         this.queryAllProduct();
+     },
+     methods: {
+
+         onSubmit(){
+             this.userId = sessionStorage.getItem("userId");
+
+             var sale = {
+                 'price' : this.form.price,
+                 'quantity' : this.form.quantity,
+                 'userId' : this.userId,
+                 'productId':this.form.productId,
+             }
+
+             let urlSearchParams = new URLSearchParams();
+             urlSearchParams.append('price',this.form.price);
+             urlSearchParams.append('quantity',this.form.quantity);
+             urlSearchParams.append('userId',this.userId);
+             urlSearchParams.append('productId',this.form.productId);
+
+             axios({
+                 url:'/users/doAddSale',
+                 method:"post",
+                 params:{
+                     price: this.form.price,
+                     quantity: this.form.quantity,
+                     userId:this.userId,
+                     productId: this.form.productId,
+                 }
+             })
+                 .then(re => {
+                     if(re.data.code){
+                         alert('添加成功！');
+                         location.href="index";
+                     }else {
+                         this.$message.error('添加失败！');
+                     }
+                 })
+                 .catch(error => {
+                     alert("错误！")
+                 })
+         },
+         toSaleList(pageNo) {
+             this.pageNo = pageNo;
+             // 查询数据
+             let order = this.optionValue;
+             axios.get("/users/toSaleList",{params: {pageNo,order,pageSize:4}})
+                 .then(re => {
+                     this.tableData = re.data.list;
+                     this.totalCount =re.data.total;
+                 })
+                 .catch(error => {
+                     alert("错误！")
+                 })
+         },
+         //点击行响应
+         handleclick: function(row, event, column){
+             this.highlightId = row.id;
+         },
+
+         //搜索
+         search: function(){
+             this.loadData(this.criteria, this.currentPage, this.pagesize);
+         },
+
+         //改变当前点击的行的class，高亮当前行
+         tableRowClassName: function(row, index){
+             if(row.id == this.highlightId)
+             {
+                 return 'info-row';
+             }
+         },
+
+         //每页显示数据量变更
+         handleSizeChange: function(val) {
+             this.pagesize = val;
+             this.loadData(this.criteria, this.currentPage, this.pagesize);
+         },
+
+         //页码变更
+         handleCurrentChange: function(val) {
+             this.currentPage = val;
+             this.loadData(this.criteria, this.currentPage, this.pagesize);
+         },
+
+         logout:function(){
+             if(confirm("确定退出吗？") == true){
+                 console.log("yy");
+                 sessionStorage.setItem("realName", null);
+                 location.href = "/";
+             }else{
+                 return false;
+             }
+         },
+
+         queryAllProduct(){
+             axios.get("/users/queryAllProduct")
+                 .then(re => {
+                    this.productNameList = re.data;
+                 })
+                 .catch(error => {
+                     alert("错误！")
+                 })
+         },
+
+         toQueryAllProduct(){
+             let id = this.productId;
+             axios.get("/users/queryAllProduct",{params: {id}})
+                 .then(re => {
+                     this.quantity = re.data[0].quantity;
+                 })
+                 .catch(error => {
+                     alert("错误！")
+                 })
+         },
+
+
+     }
+ })
+ /*var app =new Vue({
+     el:"#app",
+     data(){
+         return{
+             realName:'',
+             tableData: [],
+             total: 0,
+             pageNo: 1,
+             optionValue: "sale_date",
+         }
+     },
+     created(){
+         //this.realName = localStorage.getItem("realName");
+         this.realName = sessionStorage.getItem("realName");
+         this.toSaleList(1);
+     },
+     methods: {
+         toSaleList(pageNo) {
+             this.pageNo = pageNo;
+             // 查询数据
+             let order = this.optionValue;
+
+             axios.get("/users/toSaleList",{params: {pageNo,order,}})
+                 .then(re => {
+                     this.tableData = re.data.list;
+                     this.total =re.data.total;
+                     console.log(this.tableData);
+                 })
+                 .catch(error => {
+                     alert("错误！")
+                 })
+         }
+     }
+
+ })*/
+</script>
+</html>

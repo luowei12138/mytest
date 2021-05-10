@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.bdqn.mapper.SaleMapper">
+
+    <resultMap type="cn.bdqn.entity.Sale" id="SaleMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="price" column="price" jdbcType="NUMERIC"/>
+        <result property="quantity" column="quantity" jdbcType="INTEGER"/>
+        <result property="totalPrice" column="total_price" jdbcType="NUMERIC"/>
+        <result property="saleDate" column="sale_date" jdbcType="TIMESTAMP"/>
+        <result property="userId" column="user_id" jdbcType="INTEGER"/>
+        <result property="productId" column="product_id" jdbcType="INTEGER"/>
+        <result property="productName" column="product_name" jdbcType="VARCHAR"/>
+        <result property="realName" column="real_name" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <resultMap type="cn.bdqn.entity.Product" id="ProductMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="productName" column="product_name" jdbcType="VARCHAR"/>
+        <result property="quantity" column="quantity" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+        insert into invoicingsystem.sale(price, quantity, total_price, sale_date, user_id, product_id)
+        values (#{price}, #{quantity}, #{totalPrice}, #{saleDate}, #{userId}, #{productId})
+    </insert>
+
+    <update id="updateProduct">
+        update invoicingsystem.product
+        <set>
+            <if test="productName != null and productName != ''">
+                product_name = #{productName},
+            </if>
+            <if test="quantity != null">
+                quantity = #{quantity},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!--查询单个-->
+    <select id="queryByIdProduct" resultMap="ProductMap">
+        select id,
+               product_name,
+               quantity
+        from invoicingsystem.product
+        where id = #{id}
+    </select>
+
+    <select id="queryAllByOrderBy" resultType="java.util.Map">
+        SELECT
+            sale.id AS id,
+            product.product_name,
+            sale.price,
+            sale.quantity,
+            sale.total_price,
+            sale.sale_date,
+            users.real_name
+        FROM
+            product
+                INNER JOIN sale ON product.id = sale.product_id
+                INNER JOIN users ON sale.user_id = users.id
+        ORDER BY
+            ${ORDER} DESC
+    </select>
+
+
+
+    <!--通过实体作为筛选条件查询-->
+    <select id="queryAllProduct" resultMap="ProductMap">
+        select
+        id, product_name, quantity
+        from invoicingsystem.product
+        <where>
+            <if test="id != null">
+                id = #{id}
+            </if>
+        </where>
+    </select>
+
+</mapper>
+

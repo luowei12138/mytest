@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" type="text/css" th:href="@{element/index.css}">
+</head>
+<body>
+<div id="app">
+    <el-form ref="loginForm" :rules="rules" :model="loginForm" class="loginContainer">
+        <h3 class="loginTitle">小型进销存系统</h3>
+        <el-form-item prop="username">
+            <el-input type="text" auto-complete="false" v-model="loginForm.username" placeholder="请输入账号"></el-input>
+        </el-form-item>
+        <el-form-item prop="password">
+            <el-input type="password" auto-complete="false" v-model="loginForm.password" placeholder="请输入密码">
+            </el-input>
+        </el-form-item>
+        <el-button type="primary" style="width: 100%;" @click="submitLogin">登入</el-button>
+    </el-form>
+</div>
+</body>
+<script th:src="@{/js/vue.min.js}"></script>
+<script th:src="@{/js/vue-axios.js}"></script>
+<script th:src="@{/element/index.js}"></script>
+<script>
+    var app = new Vue({
+        el: "#app",
+        data() {
+            return {
+                loginForm: {
+                    username: '',
+                    password: '',
+                },
+                tableData: [],
+                rules: {
+                    username: [{
+                        required: true,
+                        message: '账号不能为空',
+                        trigger: 'blur'
+                    }],
+                    password: [{
+                        required: true,
+                        message: '密码不能为空',
+                        trigger: 'blur'
+                    }],
+                }
+            }
+        },
+        methods: {
+            submitLogin() {
+                this.$refs.loginForm.validate((valid) => {
+                    if (valid) {
+                        axios.get("/users/doLogin",{params:{username:this.$data.loginForm.username,password:this.$data.loginForm.password}})
+                            .then(re => {
+                                console.log(re.data);
+                                if(re.data.code == "200"){
+                                    this.$message.success('登入成功！');
+                                    //localStorage.setItem("realName",re.data.data.realName);
+                                    console.log(re.data.data);
+                                    sessionStorage.setItem("userId",re.data.data.id);
+                                    sessionStorage.setItem("realName",re.data.data.realName);
+                                    location.href ="index";
+                                }else{
+                                    this.$message.error('登入失败！'+re.data.msg);
+                                }
+                            })
+                            .catch(error => {
+                                alert("错误！")
+                            })
+                    } else {
+                        this.$message.error('请输入所有字段！');
+                        return false;
+                    }
+                });
+            }
+
+        }
+    })
+</script>
+
+<style>
+    .loginContainer {
+        border-radius: 15px;
+        background-clip: padding-box;
+        margin: 180px auto;
+        width: 350px;
+        padding: 15px 35px 15px 35px;
+        background: #fff;
+        border: 1px solid #eaeaea;
+        box-shadow: 0 0 25px #cac6c6;
+    }
+
+    .loginTitle {
+        margin: 0px auto 40px auto;
+        text-align: center;
+    }
+
+    .loginRemember {
+        text-align: left;
+        margin: 0px 0px 15px 0px;
+    }
+</style>
+
+
+</html>
